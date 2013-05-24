@@ -1,10 +1,22 @@
 //Library code
 //2013-05-21 方法名按照字母顺序排列，属性放置最上
 ;(function(){
-	/*
 	var
-	generalProperties = 'id,title,for,alt,style,dir,lang,accesskey,tabindex,name,type,value',
-	specialProperties = 'class',
+	//底层不对外暴露的(样式等)选项
+	//放在匿名函数内部变量里，保护起来
+	deepOptions = {
+		chart: {
+			backgroundColor: '#fff'       
+		},
+		title: {
+			style: {
+				fontSize: '16px',
+			 	color: '#274b6d',
+				lineHeight: 2,
+				fontFamily:'\u5b8b\u4f53,Arial'	
+			}       
+		}	    
+	},
 	//只返回id选择器的dom元素
 	g = function(selector){
 		if(typeof selector == 'string'){
@@ -16,7 +28,8 @@
 		}
 
 		return null;
-	},
+	};
+	/*
 	getAttr = function(selector, attr){
 		var
 		dom = g(selector)		
@@ -46,21 +59,37 @@
 	*/
 	
 	//以下定义Charts类
-	function Charts(selector, options){
-		this.init(selector, options);
+	function Charts(options){
+		this.init(options);
 	}
 	Charts.prototype = {
 
 		//默认属性
-		defaultOption: {
+		defaultOptions: {
 			chart: {
 				type: 'line',
 				width: 400,
 				height: 600
+			},
+			//增加title属性和功能
+			title:{
+				//样式属性完全遵循css的value值的写法
+				align: 'center',
+			  	floating: false,	//1.首先看是否floating,如果没有，并且2.verticalAlign != 'middle'就可以使用文档布局
+				margin: '15px',
+				style: null,
+				text: 'Chart title',
+				useHTML: false,
+				verticalAlign: 'top',
+				x: 0,	//因为x,y的存在，title必须使用position:relative相关定位，相对自身移动位置
+				y: '15px'	
 			}
 		},
+
+		
+
 		//经过初始化处理之后得到的最终选项
-		finalOptions: null,
+		//finalOptions: null,
 		//isSupportCanvas: null,
 		//isSupportVml: null,
 		//isSupportSVG: null,
@@ -133,11 +162,20 @@
 			options = this.finalOptions,
 			selector = options['chart']['selector'],
 			width = canvas.width = options['chart']['width'],
-			height = canvas.height = options['chart']['height']
+			height = canvas.height = options['chart']['height'],
+			title = options['title']['text'];
 
-			context.fillStyle = "#fff";
+			//曲线背景
+			context.fillStyle = options['chart']['backgroundColor'];
 			context.fillRect(0,0,width,height);
 
+			//title
+			context.fillStyle = options['title']['style']['color'];
+			context.font = options['title']['style']['fontSize'] + '/' + options['title']['style']['lineHeight'] + ' ' + options['title']['style']['fontFamily'];
+			var titleWidth = context.measureText(title).width;
+			context.fillText(title,Math.round((width - titleWidth)/2),50);
+
+			/*
 			context.strokeStyle = "#c0c0c0";
 			context.lineWidth = 1;
 			context.beginPath();
@@ -219,13 +257,13 @@
 			context.arc(800,186,4,0,2*Math.PI);
 
 			context.fill();
+			*/
 			
 
-			document.getElementById(selector.replace('#','')).appendChild(canvas);			
+			g(selector).appendChild(canvas);			
 		},
 
-		drowCharts: function(){			
-			/*
+		drawCharts: function(){			
 
 			if(this.isSupportSVG){
 				this.drawSVG();
@@ -236,7 +274,6 @@
 				this.drawVML();
 				return;
 			}
-			*/
 			if(this.isSupportCanvas){
 				this.drawCanvas();
 				return;
@@ -279,9 +316,7 @@
 			svgInnerHTMLArray[svgInnerHTMLArray.length] = dotCurvePathHTML;
 			
 			
-			$(selector).html(svgInnerHTMLArray.join(''));
-			//$(selector).html(''+this.isSupportSVG()+ this.isSupportCanvas()+ this.isSupportVML());
-			//alert(''+this.isSupportSVG()+ this.isSupportCanvas()+ this.isSupportVML())
+			g(selector).innerHTML = svgInnerHTMLArray.join('');
 		},
 		//画出图形
 		drawVML: function(){
@@ -342,7 +377,7 @@
 			svgInnerHTMLArray[svgInnerHTMLArray.length] = '<v:oval style="position:absolute;width:4px;height:4px;left:698px;top:220px;" fillcolor="#2f7ed8" strokecolor="#2f7ed8" strokeweight="4"></v:oval>';
 			svgInnerHTMLArray[svgInnerHTMLArray.length] = '<v:oval style="position:absolute;width:4px;height:4px;left:798px;top:184px;" fillcolor="#2f7ed8" strokecolor="#2f7ed8" strokeweight="4"></v:oval>';
 			svgInnerHTMLArray[svgInnerHTMLArray.length] = '';
-			$(selector).html(svgInnerHTMLArray.join(''));
+			g(selector).innerHTML = svgInnerHTMLArray.join('');
 		},
 
 		
@@ -371,25 +406,28 @@
 			var
 			arg = arguments,
 			options = arg[arg.length-1],
-			initOptions = this.initOptions(arg[0], options)
+			initOptions = this.initOptions(options);
 
-			this.finalOptions = this.mergeOptions({chart:{selector:arg[0].selector}},this.defaultOption, initOptions, options);
+			this.finalOptions = this.mergeOptions(
+					deepOptions,
+					this.defaultOptions,	//对外爆料的默认选项
+					initOptions,	//处理之后的选项
+					options	//用户传入的选项
+			);
 
 
-			//this.drowSVG(arg[0],finalOptions);	
-			//this.drowVML(arg[0],finalOptions);
-
-			//通过this.finalOptions获取所有参数，不在通过方法的形参传来传去了			
-			this.drowCharts();
+			//通过this.finalOptions获取所有参数，不再通过方法的形参传来传去了			
+			this.drawCharts();
 		},
 
 		//根据传入的options参数，调整初始化一些参数，比如width等
-		initOptions : function(selector, options){
+		initOptions : function(options){
 			
 			var 
-			node = $(selector),
-			width = node.width(),
-			height = node.height(),
+			selector = options['chart']['selector'],
+			node = g(selector),
+			width = node.offsetWidth,
+			height = node.offsetHeight,
 			dataArray = options.series.data,
 			dataLength = dataArray.length,
 			parseArray = [],
@@ -418,6 +456,7 @@
 
 			return {
 				chart: {
+					selector: selector,
 					width: width,
 					height: height
 				},
@@ -437,36 +476,100 @@
 			var
 			res = {},
 			l = arguments.length,
-			isObject = function(o){	//判断是否是一个离散对象，可以使用如下类型验证 {},"",1,function(){},[],undefined,null,true //&& o instanceof Array === false
-				return typeof o === 'object' && o instanceof Object === true && o instanceof Array === false;
+
+			/**
+			 * @fn 判断是否是一个对象直接量，识别如下变量: {},{a:1},{a:{a1:1}}
+			 * @params o 任何类型
+			 * @return {Boolean} true | false
+			 * */
+			isObjectLiteral = function(o){	
+				if(o instanceof Object){
+					var 
+					reg = /^function\s(\w+)\(/,
+					constructor = o.constructor + '',
+					/* IE8下会返回含有\n的字符串
+					* "
+					* function Object() {
+    					*    [native code]
+					* }
+					* "
+					* chrome下返回
+					* "function Object() { [native code] }"
+					*/
+					//使用replace方法整理成单行字符串格式
+					constructor = constructor.replace(/\n+/g,''),
+					resArray = reg.exec(constructor);
+					return resArray instanceof Array && resArray.length>1 && resArray[1] === 'Object';
+				}else{
+					return false;
+				}
 			},
-			recursiveMerge = function(a, b){	//递归调用合并2个离散对象
-				var 
-				isA = isObject(a),
-				isB = isObject(b)
-				
-				if( isA && isB ){	//a, b两个参数都是离散对象时才继续执行merge
-					for(var k in b){
-						if (!isObject(b[k])) {						
-							a[k] = b[k];
-						}else{	//如果value是离散对象，则需要进一步递归合并
-							a[k] = recursiveMerge(a[k] || {}, b[k])
-						}					
+
+			/**
+			 * @fn 非对象直接量，识别如下变量:'str',13,[],true,null,undefined,function(){},new RegExp('\w'),/\w/
+			 * @params o 任何类型
+			 * @return {Boolean} true | false
+			 * */
+			notObjectLiteral = function(o){
+				return !isObjectLiteral(o);
+			},
+
+			/**
+			 * @fn 只在{}这种情况下返回true，其他情况返回false
+			 *
+			 * */
+			isEmptyObjectListeral = function(o){
+				var
+				l = 0,
+				isO = isObjectLiteral(o);
+				if(isO){
+					for(var k in o){
+						l++
 					}
-					return a
+					return !l;
+				}else{
+					return false;
 				}
+			},
 
-				if(isA){	//如果上面没有return，并且a是对象的话，那就只有a是离散对象了，返回a
-					return a
-				}
+			/**
+			 * @fn {Function} recursiveMerge 递归调用合并2个离散对象
+			 * @params {Object}|{String}|{Number}|{undefined}|{null}{Boolean}|{Array}|.etc a,b 用于merge的对象，可以是任何类型
+			 * @params {Boolean} isForce true:强制使用b覆盖a, false:兼容性merge 
+			 * */
+			recursiveMerge = function(a, b, isForce){
+				var 
+				isA = isObjectLiteral(a),
+				isB = isObjectLiteral(b),
+				isAE = isEmptyObjectListeral(a),
+				isBE = isEmptyObjectListeral(b),
+				isForce = isForce == undefined ? false : isForce;	//没有赋值的时候，使用默认值false
 
-				if(isB){	//如果上面a也不是对象，并且b是对象，肯定返回b了
-					return b
+				if(isB){ //b是对象直接量
+					if(isBE){ //b是空对象{}
+						isForce &&  (a = b);
+						return a;
+					}
+					//如果函数能继续向下走，表示b不是空对象{a:1}
+					for(var k in b){
+						if(notObjectLiteral(b[k])){
+							if(notObjectLiteral(a[k])){
+								a[k] = b[k];
+							}else{
+								isForce && (a[k] = b[k]);
+							}
+						}else{	//b[k]是一个对象直接量: {xx:1}
+							a[k] = recursiveMerge(a[k] || {}, b[k], isForce);
+						}
+					}
+					return a;
+				}else if(isA){ //a是对象直接量,'aaa',121去merge，返回{}
+					isForce && (a = b);
+					return a;
+				}else{
+					return b;
 				}
-				
-				//如果以上语句都没有返回，表示a，b都不是离散对象，则返回一个空对象
-				return {};								
-			}
+			};
 
 			for(var i=0; i<l; i++){
 				res = recursiveMerge(res, arguments[i]);	
@@ -502,27 +605,6 @@
 
 	}
 	Charts.prototype.constructor = Charts;
-
+	window.Charts = Charts;
 	
-
-	/**
-	 * @fn 生成图表
-	 * @return this
-	 * @param {Object} paramObject 对象格式的配置参数
-	 * {
-	 *	width:100,
-	 *	height:100,
-	 *	text:{},
-	 *	
-	 *	grid:{},
-	 *	xAxis:{},
-	 *	yaxis:{},
-	 *	curve:{}
-	 * }
-	 * @other 这里先参考 highcharts的配置参数，稍后再整理
-	 * */
-	$.fn.charts = function(options){
-		new Charts($(this), options);
-		return $(this);
-	}
 })();
