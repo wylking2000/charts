@@ -3,22 +3,36 @@
 	var charts = new Charts({
 		chart: {
 			type: 'line',
-			selector: 'charts'
+			selector: 'charts',
+	    		backgroundColor: '#f1f1f1'
 		},
 		title: {
-			text: '媒体播放统计',
-			align: 'center'	
-			//x:10,
-			//y:10,
-			//floating:false,
-			//margin:15,
+			align: 'center',	
+			//x:400,
+			//y:200,
+			//floating: false,
 			//style:null,
 			//useHTML:false,
-			//verticalAlign:top,
+			verticalAlign:'top',
+			style: {
+				/* 为减少开发的难度和工作量，在style配置选项中只支持以下几种样式设置，不支持其他额外属性 */
+				marginLeft: '15px',	//只支持px
+				marginRight: '15px',
+				marginBottom: '5px',
+				marginTop: '5px'
+			}, 
+			text: '媒体播放统计' //title显示开关，如果存在就显示，不存在就不显示 
+			//text: null 
 		},
 		subtitle:{
-			text: '',
-       			align: 'center'		
+       			align: 'center'	,
+			style: {
+				marginBottom: '5px',
+				marginTop: '0px'
+			},	
+			verticalAlign: 'top',
+			text: '二级标题'
+			//text: null
 		},
 		series:{
 			data: [data]
